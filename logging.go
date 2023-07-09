@@ -1,5 +1,5 @@
 /*
-* Copyright 2022 Thorsten A. Knieling
+* Copyright 2022-2023 Thorsten A. Knieling
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -34,6 +34,9 @@ func (*nilLogger) Errorf(format string, args ...interface{}) {
 }
 
 func (*nilLogger) Fatal(args ...interface{}) {
+}
+
+func (*nilLogger) Fatalf(format string, args ...interface{}) {
 }
 
 // Log defines the log interface to manage other Log output frameworks
