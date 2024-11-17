@@ -1,5 +1,5 @@
 /*
-* Copyright 2022-2023 Thorsten A. Knieling
+* Copyright 2022-2024 Thorsten A. Knieling
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -13,9 +13,28 @@ package log
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 )
+
+const maxBufferEntries = 100
+
+type errorLevel byte
+
+const (
+	fataL errorLevel = iota
+	errorL
+	infoL
+	debugL
+)
+
+type tempStoreElement struct {
+	level   errorLevel
+	message string
+}
+
+var tempStore = make([]tempStoreElement, 0)
 
 type nilLogger struct {
 }
@@ -24,19 +43,35 @@ func lognil() *nilLogger {
 	return &nilLogger{}
 }
 
+func disableLog() {
+	Log = lognil()
+}
+
+func shrinkTempStore() {
+	if len(tempStore) > maxBufferEntries {
+		tempStore = tempStore[len(tempStore)-maxBufferEntries:]
+	}
+}
+
 func (*nilLogger) Debugf(format string, args ...interface{}) {
 }
 
 func (*nilLogger) Infof(format string, args ...interface{}) {
+	tempStore = append(tempStore, tempStoreElement{infoL, fmt.Sprintf(format, args...)})
+	shrinkTempStore()
 }
 
 func (*nilLogger) Errorf(format string, args ...interface{}) {
+	tempStore = append(tempStore, tempStoreElement{errorL, fmt.Sprintf(format, args...)})
+	shrinkTempStore()
 }
 
 func (*nilLogger) Fatal(args ...interface{}) {
 }
 
 func (*nilLogger) Fatalf(format string, args ...interface{}) {
+	tempStore = append(tempStore, tempStoreElement{fataL, fmt.Sprintf(format, args...)})
+	os.Exit(1)
 }
 
 // Log defines the log interface to manage other Log output frameworks
@@ -51,6 +86,24 @@ type LogI interface {
 // Central central configuration
 var Log = LogI(lognil())
 var debug = false
+
+func InitLog(newLog LogI) {
+	Log = newLog
+	if len(tempStore) > 0 {
+		for _, t := range tempStore {
+			switch t.level {
+			case fataL:
+				Log.Fatalf(t.message)
+			case errorL:
+				Log.Errorf(t.message)
+			case infoL:
+				Log.Infof(t.message)
+			default:
+			}
+		}
+	}
+	tempStore = make([]tempStoreElement, 0)
+}
 
 func IsDebugLevel() bool {
 	return debug

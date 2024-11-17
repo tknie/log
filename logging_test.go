@@ -1,5 +1,5 @@
 /*
-* Copyright 2022-2023 Thorsten A. Knieling
+* Copyright 2022-2024 Thorsten A. Knieling
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 	defer logger.Sync()
 
 	sugar := logger.Sugar()
-	Log = sugar
+	InitLog(sugar)
 
 	sugar.Infof("AdabasGoApi logger initialization succeeded")
 	return nil
@@ -150,7 +150,7 @@ func TestLogrus(t *testing.T) {
 	}
 	log.SetOutput(f)
 	log.Infof("Init logrus")
-	Log = log
+	InitLog(log)
 	fmt.Println("Logging running")
 
 	flog, err := os.Open(os.TempDir() + "/" + fileName)
@@ -162,4 +162,49 @@ func TestLogrus(t *testing.T) {
 		return
 	}
 	assert.Regexp(t, "time=\"20..-..-..T..:..:..\" level=info msg=\"Init logrus\"\n", string(logInfo))
+}
+
+const testResult = `info:INFO: Pre-log information
+error:ERROR: Pre-log information
+debug:DEBUG: Post-log information
+info:INFO: Post-log information
+error:ERROR: Post-log information
+`
+
+type testLogger struct {
+	testLog string
+}
+
+var testLog = &testLogger{}
+
+func (t *testLogger) Debugf(format string, args ...interface{}) {
+	t.testLog += "debug:" + fmt.Sprintf(format+"\n", args...)
+}
+
+func (t *testLogger) Infof(format string, args ...interface{}) {
+	t.testLog += "info:" + fmt.Sprintf(format+"\n", args...)
+}
+
+func (t *testLogger) Errorf(format string, args ...interface{}) {
+	t.testLog += "error:" + fmt.Sprintf(format+"\n", args...)
+}
+
+func (t *testLogger) Fatal(args ...interface{}) {
+}
+
+func (t *testLogger) Fatalf(format string, args ...interface{}) {
+	t.testLog += "fatal:" + fmt.Sprintf(format+"\n", args...)
+	os.Exit(1)
+}
+
+func TestCache(t *testing.T) {
+	disableLog()
+	Log.Debugf("DEBUG: Pre-log information")
+	Log.Infof("INFO: Pre-log information")
+	Log.Errorf("ERROR: Pre-log information")
+	InitLog(testLog)
+	Log.Debugf("DEBUG: Post-log information")
+	Log.Infof("INFO: Post-log information")
+	Log.Errorf("ERROR: Post-log information")
+	assert.Equal(t, testResult, testLog.testLog)
 }
