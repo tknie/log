@@ -3,7 +3,7 @@ module github.com/tknie/log
 go 1.19
 
 require (
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.1
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.24.0
 )
