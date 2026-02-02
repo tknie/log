@@ -40,6 +40,12 @@ func init() {
 	}
 }
 
+// InitZapLogWithFilename initializes the zap logger with a file name and default log level
+func InitZapLogWithFilename(fileName string) (err error) {
+	return InitZapLogLevelWithFilename(fileName, level)
+}
+
+// InitZapLogLevelWithFilename initializes the zap logger with a file name and log level
 func InitZapLogLevelWithFilename(fileName string, levelIn zapcore.Level) (err error) {
 	level = levelIn
 	p := os.Getenv("LOGPATH")
@@ -59,12 +65,14 @@ func InitZapLogLevelWithFilename(fileName string, levelIn zapcore.Level) (err er
 	return InitZapLogWithFile(name)
 }
 
+// InitZapLogLevelWithFile initializes the zap logger with a file and log level
 func InitZapLogLevelWithFile(fileName string, levelIn zapcore.Level) (err error) {
 	level = levelIn
 
 	return InitZapLogWithFile(fileName)
 }
 
+// InitZapLogWithFile initializes the zap logger with a file
 func InitZapLogWithFile(name string) (err error) {
 	lumberLog := &lumberjack.Logger{
 		Filename:   name, // Location of the log file
