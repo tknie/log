@@ -187,8 +187,7 @@ func stack2() {
 }
 
 func stack3() {
-	LogFunctionStart()
+	LogFunctionStarts("stack3")
 	Log.Debugf("In stack3")
-	defer LogFunctionEnd(time.Now())
-
+	defer LogFunctionEnds(time.Now(), "stack3")
 }

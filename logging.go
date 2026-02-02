@@ -143,19 +143,30 @@ func TimeTrack(start time.Time, name string) {
 
 // LogFunctionStart log function start if debug is enabled
 func LogFunctionStart() {
+	LogFunctionStarts("")
+}
+
+// LogFunctionStart log function start if debug is enabled
+func LogFunctionStarts(info string) {
 	if !debugEnabled {
 		return
 	}
 	pc, _, _, ok := runtime.Caller(1)
 	details := runtime.FuncForPC(pc)
 	if ok && details != nil {
-		Log.Debugf("Entering %s())", details.Name())
+		Log.Debugf("Entering %s()) %s", details.Name(), info)
 	}
 }
 
 // LogFunctionEnd log function end if debug is enabled
 // Usage: defer LogFunctionEnd(time.Now())
 func LogFunctionEnd(start time.Time) {
+	LogFunctionEnds(start, "")
+}
+
+// LogFunctionEnd log function end if debug is enabled
+// Usage: defer LogFunctionEnd(time.Now())
+func LogFunctionEnds(start time.Time, info string) {
 	if !debugEnabled {
 		return
 	}
@@ -163,6 +174,6 @@ func LogFunctionEnd(start time.Time) {
 	details := runtime.FuncForPC(pc)
 	if ok && details != nil {
 		elapsed := time.Since(start)
-		Log.Debugf("Leaving %s() tooks %s ms", details.Name(), elapsed)
+		Log.Debugf("Leaving %s() %s tooks %s ms", details.Name(), info, elapsed)
 	}
 }
