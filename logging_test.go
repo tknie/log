@@ -1,5 +1,5 @@
 /*
-* Copyright 2022-2024 Thorsten A. Knieling
+* Copyright 2022-2026 Thorsten A. Knieling
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -12,13 +12,10 @@
 package log
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -29,8 +26,8 @@ import (
 )
 
 func initTestLogWithFile(t *testing.T, fileName string) error {
-	err := initLogLevelWithFile(fileName, zapcore.DebugLevel)
-	if err != nil {
+	err := InitZapLogLevelWithFile(fileName, zapcore.DebugLevel)
+	if !assert.NoError(t, err) {
 		t.Fatalf("error opening file: %v", err)
 	}
 	return err
@@ -41,51 +38,6 @@ func newWinFileSink(u *url.URL) (zap.Sink, error) {
 	return os.OpenFile(u.Path[1:], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 }
 
-func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
-	p := os.Getenv("LOGPATH")
-	if p == "" {
-		p = os.TempDir()
-	}
-	var name string
-	if runtime.GOOS == "windows" {
-		zap.RegisterSink("winfile", newWinFileSink)
-		//		OutputPaths: []string{"stdout", "winfile:///" + filepath.Join(GlobalConfigDir.Path, "info.log.json")},
-		name = "winfile:///" + p + string(os.PathSeparator) + fileName
-	} else {
-		name = "file://" + filepath.ToSlash(p+string(os.PathSeparator)+fileName)
-	}
-
-	rawJSON := []byte(`{
-	"level": "error",
-	"encoding": "console",
-	"outputPaths": [ "XXX"],
-	"errorOutputPaths": ["stderr"],
-	"encoderConfig": {
-	  "messageKey": "message",
-	  "levelKey": "level",
-	  "levelEncoder": "lowercase"
-	}
-  }`)
-
-	var cfg zap.Config
-	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
-		return err
-	}
-	cfg.Level.SetLevel(level)
-	cfg.OutputPaths = []string{name}
-	logger, err := cfg.Build()
-	if err != nil {
-		return err
-	}
-	defer logger.Sync()
-
-	sugar := logger.Sugar()
-	InitLog(sugar)
-
-	sugar.Infof("AdabasGoApi logger initialization succeeded")
-	return nil
-}
-
 func doTrackCall() {
 	defer TimeTrack(time.Now(), "Time Track Unit test ")
 
@@ -93,7 +45,9 @@ func doTrackCall() {
 
 func TestLogZap(t *testing.T) {
 	fileName := "zap.log"
-	os.Remove(os.TempDir() + "/" + fileName)
+	fileName = os.TempDir() + "/" + fileName
+	fmt.Println("Use log file:", fileName)
+	os.Remove(fileName)
 	err := initTestLogWithFile(t, fileName)
 	if !assert.NoError(t, err) {
 		fmt.Println(err)
@@ -111,7 +65,7 @@ func TestLogZap(t *testing.T) {
 	SetDebugLevel(false)
 	SetDebugLevel(d)
 
-	flog, err := os.Open(os.TempDir() + "/" + fileName)
+	flog, err := os.Open(fileName)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -119,12 +73,13 @@ func TestLogZap(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.Regexp(t, `info	AdabasGoApi logger initialization succeeded
-info	Time Track Unit test  took \d*ns
-debug	This is a test of data HELLO
-debug	ABC
-debug	XXXX
-debug`, string(logInfo))
+	assert.Regexp(t, `....-..-.. ..:..:..\tinfo\tStart logging with level debug
+....-..-.. ..:..:..\tinfo\tTime Track Unit test  took [0-8]*ns
+....-..-.. ..:..:..\tdebug\tThis is a test of data HELLO
+....-..-.. ..:..:..\tdebug\tABC
+....-..-.. ..:..:..\tdebug\tXXXX
+....-..-.. ..:..:..\tdebug\t
+`, string(logInfo))
 }
 
 func TestLogrus(t *testing.T) {
@@ -207,4 +162,33 @@ func TestCache(t *testing.T) {
 	Log.Infof("INFO: Post-log information")
 	Log.Errorf("ERROR: Post-log information")
 	assert.Equal(t, testResult, testLog.testLog)
+}
+
+func TestStackTest(t *testing.T) {
+	InitZapLogLevelWithFile("StackTest.log", zapcore.DebugLevel)
+	Log.Debugf("DEBUG: Post-log information")
+	Log.Infof("INFO: Post-log information")
+	Log.Errorf("ERROR: Post-log information")
+	stack1()
+}
+
+func stack1() {
+	LogFunctionStart()
+	stack2()
+	defer LogFunctionEnd(time.Now())
+
+}
+
+func stack2() {
+	LogFunctionStart()
+	stack3()
+	defer LogFunctionEnd(time.Now())
+
+}
+
+func stack3() {
+	LogFunctionStart()
+	Log.Debugf("In stack3")
+	defer LogFunctionEnd(time.Now())
+
 }

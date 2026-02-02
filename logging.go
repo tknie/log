@@ -1,5 +1,5 @@
 /*
-* Copyright 2022-2024 Thorsten A. Knieling
+* Copyright 2022-2026 Thorsten A. Knieling
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@ package log
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -85,7 +86,7 @@ type LogI interface {
 
 // Central central configuration
 var Log = LogI(lognil())
-var debug = false
+var debugEnabled = false
 
 func InitLog(newLog LogI) {
 	Log = newLog
@@ -106,12 +107,12 @@ func InitLog(newLog LogI) {
 }
 
 func IsDebugLevel() bool {
-	return debug
+	return debugEnabled
 }
 
 func SetDebugLevel(debugIn bool) {
-	debug = debugIn
-	if debug {
+	debugEnabled = debugIn
+	if debugEnabled {
 		fmt.Println("Warning DB debug is enabled")
 	}
 }
@@ -138,4 +139,30 @@ func LogMultiLineString(debug bool, logOutput string) {
 func TimeTrack(start time.Time, name string) {
 	elapsed := time.Since(start)
 	Log.Infof("%s took %s", name, elapsed)
+}
+
+// LogFunctionStart log function start if debug is enabled
+func LogFunctionStart() {
+	if !debugEnabled {
+		return
+	}
+	pc, _, _, ok := runtime.Caller(1)
+	details := runtime.FuncForPC(pc)
+	if ok && details != nil {
+		Log.Debugf("Entering %s())", details.Name())
+	}
+}
+
+// LogFunctionEnd log function end if debug is enabled
+// Usage: defer LogFunctionEnd(time.Now())
+func LogFunctionEnd(start time.Time) {
+	if !debugEnabled {
+		return
+	}
+	pc, _, _, ok := runtime.Caller(1)
+	details := runtime.FuncForPC(pc)
+	if ok && details != nil {
+		elapsed := time.Since(start)
+		Log.Debugf("Leaving %s() tooks %s ms", details.Name(), elapsed)
+	}
 }
