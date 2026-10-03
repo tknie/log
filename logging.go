@@ -154,7 +154,11 @@ func LogFunctionStarts(info string) {
 	pc, _, _, ok := runtime.Caller(1)
 	details := runtime.FuncForPC(pc)
 	if ok && details != nil {
-		Log.Debugf("Entering %s()) %s", details.Name(), info)
+		prefix := info
+		if prefix != "" {
+			prefix += ": "
+		}
+		Log.Debugf("%sEntering %s())", prefix, details.Name())
 	}
 }
 
@@ -173,7 +177,11 @@ func LogFunctionEnds(start time.Time, info string) {
 	pc, _, _, ok := runtime.Caller(1)
 	details := runtime.FuncForPC(pc)
 	if ok && details != nil {
+		prefix := info
+		if prefix != "" {
+			prefix += ": "
+		}
 		elapsed := time.Since(start)
-		Log.Debugf("Leaving %s() %s tooks %s ms", details.Name(), info, elapsed)
+		Log.Debugf("%sLeaving %s() %s tooks %s ms", prefix, details.Name(), elapsed)
 	}
 }
